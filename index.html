@@ -6,12 +6,12 @@
 <title>Criador de Artes — Cultos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700;800&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v23h17_301026">
+<link rel="stylesheet" href="css/style.css?v23h28_301026">
 </head>
 <body>
 <header class="top">
   <div class="brand"><b>✦</b><div>CRIADOR DE ARTES<small>Cultos · Filadélfia</small></div></div>
-  <div class="cloud" id="cloud"><i></i><span>v23h17_301026</span></div>
+  <div class="cloud" id="cloud"><i></i><span>v23h28_301026</span></div>
 </header>
 
 <div class="app">
@@ -119,14 +119,35 @@
   <button class="btn" id="nextBtn">Avançar</button>
 </nav>
 <div class="lightbox" id="lightbox"><button class="btn sec lb-close" id="lbClose">← Voltar</button><img id="lbImg" alt="Arte em tamanho grande"></div>
+<div class="editor" id="editor" role="dialog" aria-label="Corrigir recorte">
+  <div class="ed-top">
+    <button class="btn sec" id="edCancel">Cancelar</button>
+    <div class="ed-hist">
+      <button class="btn sec" id="edUndo" title="Desfazer">↶ Voltar</button>
+      <button class="btn sec" id="edRedo" title="Refazer">Avançar ↷</button>
+    </div>
+    <button class="btn" id="edDone">Concluir</button>
+  </div>
+  <div class="ed-view" id="edView">
+    <div class="ed-layer" id="edLayer"><canvas id="edGhost"></canvas><canvas id="edCanvas"></canvas></div>
+    <div class="ed-ring" id="edRing"></div>
+    <button class="ed-fit" id="edFitBtn" title="Ajustar à tela">⤢</button>
+  </div>
+  <div class="ed-tools">
+    <div class="seg"><button data-mode="erase" class="on">Borracha</button><button data-mode="paint">Pintar</button></div>
+    <div class="sl"><span>Pincel</span><input type="range" id="edSize" min="8" max="120" value="40"><output id="edSizeO">40</output></div>
+    <p class="hint" id="edHint"></p>
+  </div>
+</div>
 <div id="toast"></div>
 <div class="modal" id="modal"><div class="box"><p id="modalMsg"></p><div class="btns"><button class="btn" id="modalOk">Confirmar</button><button class="btn sec" id="modalNo">Cancelar</button></div></div></div>
 
-<script src="js/config.js?v23h17_301026"></script>
-<script src="js/logos.js?v23h17_301026"></script>
-<script src="js/motor-recorte/modelo-u2netp.js?v23h17_301026"></script>
-<script src="js/motor-recorte/u2net-cpu.js?v23h17_301026"></script>
-<script src="js/motor-recorte/u2net-gl.js?v23h17_301026"></script>
-<script src="js/app.js?v23h17_301026"></script>
+<script src="js/config.js?v23h28_301026"></script>
+<script src="js/logos.js?v23h28_301026"></script>
+<script src="js/motor-recorte/modelo-u2netp.js?v23h28_301026"></script>
+<script src="js/motor-recorte/u2net-cpu.js?v23h28_301026"></script>
+<script src="js/motor-recorte/u2net-gl.js?v23h28_301026"></script>
+<script src="js/app.js?v23h28_301026"></script>
+<script src="js/editor.js?v23h28_301026"></script>
 </body>
 </html>

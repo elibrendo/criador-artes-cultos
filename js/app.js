@@ -19,6 +19,7 @@ function nextDow(dow, time) {
   if (add === 0) { const [h, m] = time.split(':').map(Number); if (now.getHours() * 60 + now.getMinutes() > h * 60 + m) add = 7; }
   d.setDate(d.getDate() + add); return ymd(d);
 }
+const ERASER_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H9l-5-5a2 2 0 0 1 0-2.8L13.2 3a2 2 0 0 1 2.8 0L21 8a2 2 0 0 1 0 2.8L12 20"/><path d="M6 11l7 7"/></svg>';
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 /* ---------------------------- cronograma ---------------------------- */
@@ -490,7 +491,8 @@ async function idbPut(rec) { const d = await idb(); return new Promise((res, rej
 async function idbDel(id) { const d = await idb(); return new Promise(res => { const tx = d.transaction('fotos', 'readwrite'); tx.objectStore('fotos').delete(id); tx.oncomplete = res; tx.onerror = res; }); }
 async function loadLocal() {
   for (const it of Lib.local) if (it.url) URL.revokeObjectURL(it.url);
-  Lib.local = (await idbAll()).map(r => ({ id: 'l:' + r.id, rid: r.id, pregador: r.pregador, url: URL.createObjectURL(r.blob), criadoEm: r.criadoEm, src: 'local' }));
+  for (const it of Lib.local) if (it.origUrl) URL.revokeObjectURL(it.origUrl);
+  Lib.local = (await idbAll()).map(r => ({ id: 'l:' + r.id, rid: r.id, pregador: r.pregador, url: URL.createObjectURL(r.blob), origUrl: r.orig ? URL.createObjectURL(r.orig) : null, criadoEm: r.criadoEm, src: 'local' }));
   renderLib();
 }
 function libItems() { const k = preacherInfo().key; return [...Lib.cloud, ...Lib.local].filter(i => i.pregador === k).sort((a, b) => b.criadoEm - a.criadoEm); }
@@ -510,7 +512,8 @@ function renderLib() {
     }
     for (const it of items) {
       const s = document.createElement('div'); s.className = 'slide';
-      s.innerHTML = `<img alt="" src="${it.url}" draggable="false">${it.src === 'local' && Lib.db ? '<span class="tag">só aqui</span>' : ''}<button type="button" class="del" title="Excluir foto">×</button>`;
+      s.innerHTML = `<img alt="" src="${it.url}" draggable="false">${it.src === 'local' && Lib.db ? '<span class="tag">só aqui</span>' : ''}<button type="button" class="edit" title="Corrigir recorte" aria-label="Corrigir recorte">${ERASER_SVG}</button><button type="button" class="del" title="Excluir foto">×</button>`;
+      s.querySelector('.edit').onclick = () => editLibItem(it);
       s.querySelector('.del').onclick = async () => { if (await confirmBox('Excluir esta foto da biblioteca?')) delPhoto(it); };
       car.appendChild(s);
     }
@@ -529,7 +532,7 @@ function renderLib() {
 function syncCarousel() { scrollCar($('car'), Math.max(0, libItems().findIndex(x => x.id === S.fotoKey))); }
 attachCarousel($('car'), $('carPrev'), $('carNext'), i => { const it = libItems()[i]; if (it && it.id !== S.fotoKey) selectPhoto(it); });
 async function selectPhoto(it) {
-  try { const img = await loadImg(it.url); S.foto = img; S.fotoKey = it.id; resetAdjust(); renderLib(); syncCarousel(); redraw(); }
+  try { const img = await loadImg(it.url); S.foto = trimAlpha(toCanvas(img)); S.fotoKey = it.id; resetAdjust(); renderLib(); syncCarousel(); redraw(); }
   catch (e) { toast('Não foi possível abrir esta foto.'); }
 }
 function autoPickPhoto() { if (S.foto) return; const items = libItems(); if (items.length) selectPhoto(items[0]); }
@@ -541,18 +544,20 @@ async function delPhoto(it) {
     toast('Foto excluída'); renderLib();
   } catch (e) { toast('Não foi possível excluir (sem permissão?)'); }
 }
-async function savePhoto(blob) {
+// blob = recorte (PNG, mesmo tamanho da original); orig = foto original (JPEG) para o pincel "pintar" do editor
+async function savePhoto(blob, orig = null) {
   const pi = preacherInfo(); const now = Date.now();
   if (Lib.db && Lib.assets) {
     try {
       const up = await Lib.assets.upload(blob, { type: 'image/png' });
+      const upO = orig ? await Lib.assets.upload(orig, { type: 'image/jpeg' }).catch(() => null) : null;
       const ref = Lib.db.collection('fotos').doc();
-      await ref.set({ pregador: pi.key, nome: pi.nome, assetId: up.id, criadoEm: now });
+      await ref.set({ pregador: pi.key, nome: pi.nome, assetId: up.id, origAssetId: upO ? upO.id : null, criadoEm: now });
       return { id: 'c:' + ref.id, url: up.url };
     } catch (e) { console.warn('upload', e); toast('Sem acesso à biblioteca compartilhada — salvando só neste aparelho.', 3500); }
   }
   const id = now.toString(36) + Math.random().toString(36).slice(2, 6);
-  try { await idbPut({ id, pregador: pi.key, blob, criadoEm: now }); await loadLocal(); return { id: 'l:' + id }; }
+  try { await idbPut({ id, pregador: pi.key, blob, orig, criadoEm: now }); await loadLocal(); return { id: 'l:' + id }; }
   catch (e) { const url = URL.createObjectURL(blob); Lib.local.push({ id: 'm:' + id, rid: id, pregador: pi.key, url, criadoEm: now, src: 'mem' }); renderLib(); return { id: 'm:' + id, url }; }
 }
 async function initCloud() {
@@ -565,7 +570,7 @@ async function initCloud() {
     const timer = setTimeout(() => { }, 10000);
     db.collection('fotos').onSnapshot(snap => {
       clearTimeout(timer);
-      Lib.cloud = snap.docs.map(d => { const v = d.data() || {}; return { id: 'c:' + d.id, rid: d.id, pregador: v.pregador, assetId: v.assetId, url: '/_blob/' + v.assetId, criadoEm: v.criadoEm || 0, src: 'cloud' }; }).filter(i => i.assetId);
+      Lib.cloud = snap.docs.map(d => { const v = d.data() || {}; return { id: 'c:' + d.id, rid: d.id, pregador: v.pregador, assetId: v.assetId, url: '/_blob/' + v.assetId, origUrl: v.origAssetId ? '/_blob/' + v.origAssetId : null, criadoEm: v.criadoEm || 0, src: 'cloud' }; }).filter(i => i.assetId);
       $('cloud').classList.add('on');
       renderLib(); autoPickPhoto();
     }, err => { clearTimeout(timer); console.warn('db', err); });
@@ -627,8 +632,9 @@ async function removeBackground(img, onP) {
   const W = Math.round(img.width * sc), H = Math.round(img.height * sc);
   const oc = document.createElement('canvas'); oc.width = W; oc.height = H; const ox = oc.getContext('2d');
   ox.imageSmoothingQuality = 'high'; ox.drawImage(mc, 0, 0, W, H); ox.globalCompositeOperation = 'source-in'; ox.drawImage(img, 0, 0, W, H);
-  return trimAlpha(oc);
+  return oc; // sem cortar as bordas: fica alinhado pixel a pixel com downscale(img, 1400), o que o editor precisa
 }
+function toCanvas(img) { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); return c; }
 function trimAlpha(c) {
   const x = c.getContext('2d'); const d = x.getImageData(0, 0, c.width, c.height).data;
   let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
@@ -689,13 +695,15 @@ $('file').onchange = async e => {
   $('procPv').innerHTML = ''; const th = downscale(img, 240); $('procPv').appendChild(th);
   $('procBar').style.width = '2%'; $('procTitle').textContent = 'Removendo o fundo…';
   $('procMsg').textContent = 'Processando no seu aparelho — a foto não sai daqui. Pode levar alguns segundos.';
-  pending = { orig: img, cut: null };
+  // base = original reduzida; full = recorte do mesmo tamanho (alinhado); cut = recorte sem bordas vazias (usado na arte)
+  pending = { orig: img, base: downscale(img, 1400), full: null, cut: null };
   try {
-    if (hasTransparency(img)) { pending.cut = trimAlpha(downscale(img, 1400)); $('procMsg').textContent = 'Essa imagem já está sem fundo.'; }
-    else pending.cut = await removeBackground(img, p => { $('procBar').style.width = Math.round(p * 100) + '%'; });
+    if (hasTransparency(img)) { pending.full = toCanvas(pending.base); $('procMsg').textContent = 'Essa imagem já está sem fundo.'; }
+    else pending.full = await removeBackground(img, p => { $('procBar').style.width = Math.round(p * 100) + '%'; });
+    pending.cut = trimAlpha(pending.full);
     $('procBar').style.width = '100%'; $('procTitle').textContent = 'Fundo removido ✓';
-    if (!$('procMsg').textContent.startsWith('Essa')) $('procMsg').textContent = 'Confira o recorte. Se não ficou bom, use a foto original.';
-    $('procPv').innerHTML = ''; $('procPv').appendChild(downscale(pending.cut, 240));
+    if (!$('procMsg').textContent.startsWith('Essa')) $('procMsg').textContent = 'Confira o recorte. Toque na foto (ou na borracha) para corrigir.';
+    showProcPreview();
     S.foto = pending.cut; S.fotoKey = null; resetAdjust(); redraw();
   } catch (err) {
     console.warn(err); $('procTitle').textContent = 'Não foi possível remover o fundo aqui';
@@ -705,13 +713,21 @@ $('file').onchange = async e => {
 };
 $('procSave').onclick = async () => {
   if (!pending || !pending.cut) return; $('procSave').disabled = true; $('procTitle').textContent = 'Salvando…';
-  try { const blob = await toBlob(pending.cut); const r = await savePhoto(blob); S.fotoKey = r.id; S.foto = pending.cut; toast('Foto salva na biblioteca ✓'); }
+  try { const blob = await toBlob(pending.full), orig = await toBlob(pending.base, 'image/jpeg', .9); const r = await savePhoto(blob, orig); S.fotoKey = r.id; S.foto = pending.cut; toast('Foto salva na biblioteca ✓'); }
   finally { $('procSave').disabled = false; $('proc').classList.remove('show'); pending = null; renderLib(); redraw(); }
 };
 $('procOrig').onclick = async () => {
   if (!pending) return; const c = downscale(pending.orig, 1400); S.foto = c; S.fotoKey = null; resetAdjust();
   const blob = await toBlob(c, 'image/jpeg', .9); const r = await savePhoto(blob); S.fotoKey = r.id;
   $('proc').classList.remove('show'); pending = null; renderLib(); redraw(); toast('Usando a foto original');
+};
+function showProcPreview() {
+  const pv = $('procPv'); pv.innerHTML = ''; pv.appendChild(downscale(pending.cut, 240));
+  pv.insertAdjacentHTML('beforeend', `<span class="edit" aria-hidden="true">${ERASER_SVG}</span>`);
+}
+$('procPv').onclick = () => {
+  if (!pending || !pending.full) return;
+  openEditor(pending.full, pending.base, res => { pending.full = res; pending.cut = trimAlpha(res); showProcPreview(); S.foto = pending.cut; redraw(); });
 };
 $('procCancel').onclick = () => { $('proc').classList.remove('show'); pending = null; S.foto = null; S.fotoKey = null; autoPickPhoto(); redraw(); };
 
