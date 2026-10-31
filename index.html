@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Criador de Artes — Cultos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700;800&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet">
@@ -65,11 +65,14 @@
         <input type="text" id="outroNome" placeholder="Nome (ex.: Pr. Marcos)" maxlength="40">
         <label class="check"><input type="checkbox" id="outroF"> Preletora</label>
       </div>
-      <div class="car-wrap">
-        <div class="car" id="car"></div>
-        <button class="car-nav prev" id="carPrev" aria-label="Foto anterior">‹</button>
-        <button class="car-nav next" id="carNext" aria-label="Próxima foto">›</button>
-        <div class="dots" id="dots"></div>
+      <div class="photo-row" id="photoRow">
+        <label class="upload-sq" for="file"><b>+</b>Enviar foto</label>
+        <div class="car-wrap">
+          <div class="car" id="car"></div>
+          <button class="car-nav prev" id="carPrev" aria-label="Foto anterior">‹</button>
+          <button class="car-nav next" id="carNext" aria-label="Próxima foto">›</button>
+          <div class="dots" id="dots"></div>
+        </div>
       </div>
       <div class="btns hidden" id="addRow"><label class="btn sec full" for="file">+ Enviar nova foto</label></div>
       <input type="file" id="file" accept="image/*" class="hidden">

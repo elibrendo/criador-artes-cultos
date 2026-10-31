@@ -369,13 +369,13 @@ function buildCultos() {
     s.innerHTML = `<small>${c.modelos[Object.keys(c.modelos)[0]].kicker}</small><b>${c.modelos[Object.keys(c.modelos)[0]].big}</b><span>${c.quando}</span>`;
     car.appendChild(s);
   }
-  const pop = $('cultoPop'); pop.innerHTML = '';
+  const pop = $('cultoPop'); pop.innerHTML = '<div class="pop-list"></div>';
   for (const k of CULTO_KEYS) {
     const th = Object.values(CULTOS[k].modelos)[0].th;
     const b = document.createElement('button'); b.setAttribute('role', 'option'); b.dataset.k = k;
     b.innerHTML = `<span class="pick-ava" style="background:${th.bg};color:${th.ink}">●</span>${CULTOS[k].nome}<span class="ck"></span>`;
     b.onclick = () => { closePop(); escolherCulto(k, dataDoCulto(k)); };
-    pop.appendChild(b);
+    pop.firstChild.appendChild(b);
   }
   updateCultos();
 }
@@ -446,8 +446,9 @@ function buildPreachers() {
   $('pickName').textContent = pi.nome || 'Digite o nome…';
   const u = avaFor(pi.key); $('pickAva').innerHTML = u ? `<img alt="" src="${u}">` : initials(pi.nome);
   const pop = $('pop'); pop.innerHTML = '';
-  for (const p of PREGADORES) {
-    if (p.id === 'outro') { pop.appendChild(document.createElement('hr')); }
+  const list = document.createElement('div'); list.className = 'pop-list';
+  // "Outro pregador" fica fixo no topo; só os nomes rolam
+  for (const p of [PREGADORES[PREGADORES.length - 1], ...PREGADORES.slice(0, -1)]) {
     const b = document.createElement('button'); b.setAttribute('role', 'option'); if (S.pregador === p.id) b.className = 'sel';
     b.innerHTML = (p.id === 'outro' ? '<span class="pick-ava">+</span>Outro pregador…' : `${avaHTML(p.id, p.nome)}${p.nome}`) + (S.pregador === p.id ? '<span class="ck">✓</span>' : '');
     b.onclick = () => {
@@ -455,8 +456,9 @@ function buildPreachers() {
       closePop(); buildPreachers(); renderLib(); autoPickPhoto(); redraw();
       if (p.id === 'outro') setTimeout(() => $('outroNome').focus(), 60);
     };
-    pop.appendChild(b);
+    if (p.id === 'outro') { pop.appendChild(b); pop.appendChild(document.createElement('hr')); } else list.appendChild(b);
   }
+  pop.appendChild(list);
   $('outroBox').classList.toggle('hidden', S.pregador !== 'outro');
 }
 function closePop() { document.querySelectorAll('.pop').forEach(p => p.classList.remove('show')); document.querySelectorAll('.pick-btn').forEach(b => b.classList.remove('open')); }
@@ -502,7 +504,7 @@ function renderLib() {
     if (!items.length) {
       const e = document.createElement(outro && !pi.nome ? 'div' : 'label'); e.className = 'slide empty';
       if (e.tagName === 'LABEL') e.htmlFor = 'file';
-      e.innerHTML = outro && !pi.nome ? 'Digite o nome do pregador<br>para enviar a foto' : '<b>+</b>Enviar foto';
+      e.innerHTML = outro && !pi.nome ? 'Digite o nome do pregador<br>para enviar a foto' : '<span class="d-only"><b>+</b>Enviar foto</span><span class="m-only">Nenhuma foto ainda</span>';
       car.appendChild(e);
     }
     for (const it of items) {
@@ -517,6 +519,7 @@ function renderLib() {
   $('dots').innerHTML = items.length > 1 ? items.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('') : '';
   $('carPrev').classList.toggle('hidden', items.length < 2);
   $('carNext').classList.toggle('hidden', items.length < 2);
+  $('photoRow').classList.toggle('canup', !(outro && !pi.nome) && (outro || !items.length));
   $('addRow').classList.toggle('hidden', !(outro && pi.nome && items.length));
   const who = pi.nome || 'este pregador';
   $('libHint').textContent = outro && !pi.nome ? 'Digite o nome do pregador para enviar a foto.' :
