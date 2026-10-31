@@ -343,25 +343,52 @@ $('playBtn').onclick = () => {
 function escolherCulto(k, r) {
   if (S.culto !== k) S.modelo = Object.keys(CULTOS[k].modelos)[0];
   S.culto = k; S.data = r.data; S.hora = r.hora;
-  syncForm(); buildCultos(); buildModels(); redraw();
-  if (isMobile()) setTimeout(() => showStep(2), 180);
+  syncForm(); updateCultos(); buildModels(); redraw();
 }
+// carrossel genérico: deslizar (ou setas) troca o item; onIdx recebe o índice ao parar
+function attachCarousel(car, prev, next, onIdx) {
+  let t;
+  car.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => { const w = car.clientWidth; if (w) onIdx(Math.round(car.scrollLeft / w)); }, 140); });
+  prev.onclick = () => car.scrollBy({ left: -car.clientWidth, behavior: 'smooth' });
+  next.onclick = () => car.scrollBy({ left: car.clientWidth, behavior: 'smooth' });
+}
+function scrollCar(car, i) { const w = car.clientWidth; if (w && Math.abs(car.scrollLeft - i * w) > 2) car.scrollTo({ left: i * w, behavior: 'auto' }); }
 function buildSuggest() {
   const c = CULTOS[REC.key], d = new Date(REC.data + 'T12:00:00');
   const quando = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   $('suggest').innerHTML = `<p>Pelo calendário, ${REC.data === ymd(new Date()) ? 'hoje' : 'o próximo'} é o <strong>${c.nome}</strong> — ${quando}, às ${fmtHora(REC.hora)}. É esse que você vai divulgar?</p><button class="btn full" id="sugOk">Sim, é esse →</button>`;
-  $('sugOk').onclick = () => escolherCulto(REC.key, REC);
+  $('sugOk').onclick = () => { escolherCulto(REC.key, REC); showStep(2); };
 }
+// Passo 1: lista suspensa + carrossel de cartões (mesmo padrão do passo do pregador)
+const CULTO_KEYS = Object.keys(CULTOS);
 function buildCultos() {
-  $('cultos').innerHTML = '';
-  for (const [k, c] of Object.entries(CULTOS)) {
-    const m0 = Object.values(c.modelos)[0];
-    const b = document.createElement('button'); b.className = 'opt' + (S.culto === k ? ' sel' : '');
-    b.innerHTML = `<span class="sw" style="background:${m0.th.bg};--ink:${m0.th.ink}"></span><span><strong>${c.nome}</strong><small>${c.quando}</small></span>`;
-    b.onclick = () => escolherCulto(k, dataDoCulto(k));
-    $('cultos').appendChild(b);
+  const car = $('cultoCar'); car.innerHTML = '';
+  for (const k of CULTO_KEYS) {
+    const c = CULTOS[k], th = Object.values(c.modelos)[0].th;
+    const s = document.createElement('div'); s.className = 'slide cslide'; s.style.cssText = `background:${th.bg};color:${th.ink}`;
+    s.innerHTML = `<small>${c.modelos[Object.keys(c.modelos)[0]].kicker}</small><b>${c.modelos[Object.keys(c.modelos)[0]].big}</b><span>${c.quando}</span>`;
+    car.appendChild(s);
   }
+  const pop = $('cultoPop'); pop.innerHTML = '';
+  for (const k of CULTO_KEYS) {
+    const th = Object.values(CULTOS[k].modelos)[0].th;
+    const b = document.createElement('button'); b.setAttribute('role', 'option'); b.dataset.k = k;
+    b.innerHTML = `<span class="pick-ava" style="background:${th.bg};color:${th.ink}">●</span>${CULTOS[k].nome}<span class="ck"></span>`;
+    b.onclick = () => { closePop(); escolherCulto(k, dataDoCulto(k)); };
+    pop.appendChild(b);
+  }
+  updateCultos();
 }
+function updateCultos() {
+  const c = CULTOS[S.culto], th = Object.values(c.modelos)[0].th, i = CULTO_KEYS.indexOf(S.culto);
+  $('cultoName').textContent = c.nome;
+  $('cultoSw').style.cssText = `background:${th.bg};color:${th.ink}`; $('cultoSw').textContent = '●';
+  document.querySelectorAll('#cultoPop button').forEach(b => { const on = b.dataset.k === S.culto; b.classList.toggle('sel', on); b.lastChild.textContent = on ? '✓' : ''; });
+  $('cultoDots').innerHTML = CULTO_KEYS.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('');
+  scrollCar($('cultoCar'), i);
+}
+attachCarousel($('cultoCar'), $('cultoPrev'), $('cultoNext'), i => { const k = CULTO_KEYS[i]; if (k && k !== S.culto) escolherCulto(k, dataDoCulto(k)); });
+$('cultoBtn').onclick = e => { e.stopPropagation(); const open = !$('cultoPop').classList.contains('show'); closePop(); $('cultoPop').classList.toggle('show', open); $('cultoBtn').classList.toggle('open', open); };
 // Miniaturas reais de cada modelo do culto escolhido
 function buildModels() {
   const c = CULTOS[S.culto]; const box = $('models'); box.innerHTML = '';
@@ -432,8 +459,8 @@ function buildPreachers() {
   }
   $('outroBox').classList.toggle('hidden', S.pregador !== 'outro');
 }
-function closePop() { $('pop').classList.remove('show'); $('pickBtn').classList.remove('open'); }
-$('pickBtn').onclick = e => { e.stopPropagation(); const open = !$('pop').classList.contains('show'); $('pop').classList.toggle('show', open); $('pickBtn').classList.toggle('open', open); };
+function closePop() { document.querySelectorAll('.pop').forEach(p => p.classList.remove('show')); document.querySelectorAll('.pick-btn').forEach(b => b.classList.remove('open')); }
+$('pickBtn').onclick = e => { e.stopPropagation(); const open = !$('pop').classList.contains('show'); closePop(); $('pop').classList.toggle('show', open); $('pickBtn').classList.toggle('open', open); };
 document.addEventListener('click', e => { if (!e.target.closest('.picker')) closePop(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
 function syncForm() {
@@ -495,22 +522,8 @@ function renderLib() {
   $('libHint').textContent = outro && !pi.nome ? 'Digite o nome do pregador para enviar a foto.' :
     items.length > 1 ? `Deslize para escolher a foto de ${who}.` : items.length ? '' : `Nenhuma foto de ${who} ainda. Envie uma — o fundo é removido automaticamente.`;
 }
-function syncCarousel() {
-  const car = $('car'), w = car.clientWidth; if (!w) return;
-  const i = Math.max(0, libItems().findIndex(x => x.id === S.fotoKey));
-  if (Math.abs(car.scrollLeft - i * w) > 2) car.scrollTo({ left: i * w, behavior: 'auto' });
-}
-let carT;
-$('car').addEventListener('scroll', () => {
-  clearTimeout(carT);
-  carT = setTimeout(() => {
-    const car = $('car'), w = car.clientWidth; if (!w) return;
-    const it = libItems()[Math.round(car.scrollLeft / w)];
-    if (it && it.id !== S.fotoKey) selectPhoto(it);
-  }, 140);
-});
-$('carPrev').onclick = () => $('car').scrollBy({ left: -$('car').clientWidth, behavior: 'smooth' });
-$('carNext').onclick = () => $('car').scrollBy({ left: $('car').clientWidth, behavior: 'smooth' });
+function syncCarousel() { scrollCar($('car'), Math.max(0, libItems().findIndex(x => x.id === S.fotoKey))); }
+attachCarousel($('car'), $('carPrev'), $('carNext'), i => { const it = libItems()[i]; if (it && it.id !== S.fotoKey) selectPhoto(it); });
 async function selectPhoto(it) {
   try { const img = await loadImg(it.url); S.foto = img; S.fotoKey = it.id; resetAdjust(); renderLib(); syncCarousel(); redraw(); }
   catch (e) { toast('Não foi possível abrir esta foto.'); }
@@ -631,11 +644,43 @@ function downscale(img, maxD) {
 }
 const toBlob = (c, type = 'image/png', q) => new Promise(r => c.toBlob(r, type, q));
 
+// Fotos de celular vêm com a rotação gravada no EXIF; aqui ela é aplicada de verdade nos pixels
+function jpegInfo(v) {
+  const r = { o: 1, rw: 0, rh: 0 };
+  try {
+    if (v.getUint16(0) !== 0xFFD8) return r;
+    for (let p = 2; p + 4 < v.byteLength;) {
+      const m = v.getUint16(p), len = v.getUint16(p + 2);
+      if (m === 0xFFE1 && v.getUint32(p + 4) === 0x45786966) {
+        const t = p + 10, le = v.getUint16(t) === 0x4949, off = t + v.getUint32(t + 4, le), n = v.getUint16(off, le);
+        for (let i = 0; i < n; i++) { const e = off + 2 + i * 12; if (v.getUint16(e, le) === 0x0112) r.o = v.getUint16(e + 8, le); }
+      } else if (m >= 0xFFC0 && m <= 0xFFCF && m !== 0xFFC4 && m !== 0xFFC8 && m !== 0xFFCC) { r.rh = v.getUint16(p + 5); r.rw = v.getUint16(p + 7); break; }
+      if ((m & 0xFF00) !== 0xFF00) break;
+      p += 2 + len;
+    }
+  } catch (e) {}
+  return r;
+}
+async function readOriented(file) {
+  const plain = () => loadImg(URL.createObjectURL(file));
+  let info = { o: 1, rw: 0, rh: 0 };
+  try { info = jpegInfo(new DataView(await file.slice(0, 262144).arrayBuffer())); } catch (e) {}
+  if (info.o < 2 || info.o > 8 || !window.createImageBitmap) return plain();
+  let bmp; try { bmp = await createImageBitmap(file, { imageOrientation: 'none' }); } catch (e) { return plain(); }
+  const w = bmp.width, h = bmp.height, o = info.o, swap = o >= 5;
+  const done = info.rw && swap && (w !== info.rw || h !== info.rh); // o navegador ignorou a opção e já girou sozinho
+  const c = document.createElement('canvas'); c.width = swap && !done ? h : w; c.height = swap && !done ? w : h;
+  const x = c.getContext('2d');
+  if (!done) x.setTransform(...[null, [1, 0, 0, 1, 0, 0], [-1, 0, 0, 1, w, 0], [-1, 0, 0, -1, w, h], [1, 0, 0, -1, 0, h], [0, 1, 1, 0, 0, 0], [0, 1, -1, 0, h, 0], [0, -1, -1, 0, h, w], [0, -1, 1, 0, 0, w]][o]);
+  x.drawImage(bmp, 0, 0); bmp.close && bmp.close();
+  return c;
+}
+
 let pending = null;
 $('file').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   const pi = preacherInfo(); if (!pi.nome) { toast('Escolha ou digite o nome do pregador antes.'); return; }
-  let img; try { img = await loadImg(URL.createObjectURL(f)); } catch (err) { toast('Não consegui abrir essa imagem.'); return; }
+  let img; try { img = await readOriented(f); } catch (err) { toast('Não consegui abrir essa imagem.'); return; }
   const proc = $('proc'); proc.classList.add('show'); $('procBtns').classList.add('hidden');
   $('procPv').innerHTML = ''; const th = downscale(img, 240); $('procPv').appendChild(th);
   $('procBar').style.width = '2%'; $('procTitle').textContent = 'Removendo o fundo…';
@@ -783,6 +828,7 @@ function showStep(n) {
   document.body.classList.toggle('final', step === TOTAL);
   if (step === TOTAL) buildSummary();
   closePop();
+  if (step === 1) updateCultos();
   if (step === 5) { renderLib(); syncCarousel(); }
   if (isMobile()) window.scrollTo({ top: 0, behavior: 'smooth' });
 }

@@ -26,7 +26,16 @@
     <div class="step" data-step="1">
       <h3><span>1</span>Qual culto?</h3>
       <div class="suggest" id="suggest"></div>
-      <div class="grid2" id="cultos"></div>
+      <div class="picker">
+        <button class="pick-btn" id="cultoBtn" aria-haspopup="listbox"><span class="pick-ava" id="cultoSw"></span><span class="pick-txt"><small>Culto</small><strong id="cultoName"></strong></span><span class="pick-arrow">Trocar ▾</span></button>
+        <div class="pop" id="cultoPop" role="listbox"></div>
+      </div>
+      <div class="car-wrap">
+        <div class="car" id="cultoCar"></div>
+        <button class="car-nav prev" id="cultoPrev" aria-label="Culto anterior">‹</button>
+        <button class="car-nav next" id="cultoNext" aria-label="Próximo culto">›</button>
+        <div class="dots" id="cultoDots"></div>
+      </div>
     </div>
 
     <div class="step" data-step="2">
@@ -43,7 +52,7 @@
       <h3><span>4</span>Data e horário</h3>
       <div class="cal" id="cal"></div>
       <p class="hint" id="dateHint"></p>
-      <div class="field"><label for="time">Horário</label><input type="time" id="time" step="300"></div>
+      <div class="field timef"><label for="time">Horário</label><input type="time" id="time" step="300"></div>
     </div>
 
     <div class="step" data-step="5">
