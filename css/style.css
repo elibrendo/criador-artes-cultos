@@ -132,9 +132,6 @@ button{cursor:pointer}
 .timef{display:flex;align-items:center;gap:12px;margin:0}
 .timef label{margin:0}
 .timef input{flex:1}
-.timef{flex:none;display:flex;align-items:center;gap:12px;margin:0}
-.timef label{margin:0}
-.timef input{flex:1}
 .car{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:12px;border:1.5px solid var(--line);scrollbar-width:none;background:repeating-conic-gradient(#2a3442 0 25%,#1f2733 0 50%) 0 0/16px 16px}
 .car::-webkit-scrollbar{display:none}
 .slide{position:relative;flex:0 0 100%;aspect-ratio:1;scroll-snap-align:center;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center}
@@ -211,4 +208,48 @@ button{cursor:pointer}
   .step .btn{padding:11px 14px}
   .step .hint{font-size:11px}
   .export-out:empty{display:none}
+}
+
+/* ---------- PC: assistente passo a passo, sem rolagem ---------- */
+@media (min-width:821px){
+  html,body{height:100%;overflow:hidden}
+  body{display:flex;flex-direction:column}
+  .app{flex:1;min-height:0}
+  .stage{position:static;height:100%;min-height:0}
+  .panel{display:flex;flex-direction:column;min-height:0;overflow:visible;padding:8px 22px 84px;position:relative}
+  .step{display:none;border:0;padding:14px 0 6px;min-height:0}
+  .step.active{display:flex;flex:1;animation:in .25s ease}
+  .step h3{margin:0;flex:none}
+  .stepinfo{display:flex;align-items:center;gap:6px;padding:8px 0 0}
+  .stepinfo i{flex:1;height:4px;border-radius:9px;background:#273242}
+  .stepinfo i.done{background:var(--accent2)}
+  .wnav{display:flex;position:fixed;right:0;bottom:0;width:430px;z-index:20;gap:10px;padding:12px 22px calc(12px + var(--safe-b));background:#0f151ef2;border-top:1px solid var(--line)}
+  .wnav .btn{flex:1;padding:14px}
+  .wnav .btn.sec{flex:0 0 34%}
+  .models{flex:1;min-height:0;grid-template-columns:1fr 1fr}
+  .mcard canvas{flex:1;min-height:0;object-fit:contain}
+  .cal{flex:1;min-height:0}
+  .cal-grid{flex:1;min-height:0;grid-template-rows:auto repeat(6,minmax(0,1fr))}
+  .day{aspect-ratio:auto;min-height:0;display:flex;align-items:center;justify-content:center;line-height:1}
+  .photo-row{flex:1;min-height:0;display:flex}
+  .car-wrap{flex:1;min-height:120px}
+  .car{height:100%}
+  .slide{aspect-ratio:auto;height:100%}
+}
+
+/* ---------- celular: correções de altura ---------- */
+@media (max-width:820px){
+  .cal{padding:8px}
+  .cal-head{margin-bottom:2px}
+  .cal-nav{width:30px;height:30px;font-size:18px}
+  .cal-dow{padding:2px 0}
+  .day{height:clamp(24px,3.7dvh,34px);font-size:14px}
+  .timef input{padding:8px 12px}
+  .photo-row{flex:none;height:clamp(120px,24dvh,220px)}
+  .car-wrap{height:100%;min-height:0}
+  .step:has(.proc.show) .photo-row{display:none}
+  .proc{padding:10px}
+  .proc .pv{width:64px}
+  .proc .btns{margin-top:8px}
+  .proc .btn{padding:9px 12px;font-size:12px}
 }
