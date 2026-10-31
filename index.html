@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Criador de Artes — Cultos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700;800&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>✦</b><div>CRIADOR DE ARTES<small>Cultos · Filadélfia</small></div></div>
+  <div class="cloud" id="cloud"><i></i><span>Biblioteca local</span></div>
+</header>
+
+<div class="app">
+  <section class="stage">
+    <div class="canvas-wrap"><canvas id="poster" width="1080" height="1920" aria-label="Prévia da arte"></canvas></div>
+    <div class="stage-bar"><button class="ghost" id="playBtn">▶ Ver animação</button><span id="sizeLabel">1080 × 1920 · Story</span></div>
+  </section>
+
+  <section class="panel" id="panel">
+    <div class="stepinfo" id="stepinfo"></div>
+
+    <div class="step" data-step="1">
+      <h3><span>1</span>Qual culto?</h3>
+      <div class="suggest" id="suggest"></div>
+      <div class="grid2" id="cultos"></div>
+    </div>
+
+    <div class="step" data-step="2">
+      <h3><span>2</span>Modelo <em id="modelCount"></em></h3>
+      <div class="models" id="models"></div>
+    </div>
+
+    <div class="step" data-step="3">
+      <h3><span>3</span>Onde você vai postar?</h3>
+      <div class="grid2" id="formats"></div>
+    </div>
+
+    <div class="step" data-step="4">
+      <h3><span>4</span>Data e horário</h3>
+      <div class="cal" id="cal"></div>
+      <p class="hint" id="dateHint"></p>
+      <div class="field"><label for="time">Horário</label><input type="time" id="time" step="300"></div>
+    </div>
+
+    <div class="step" data-step="5">
+      <h3><span>5</span>Pregador</h3>
+      <div class="picker">
+        <button class="pick-btn" id="pickBtn" aria-haspopup="listbox"><span class="pick-ava" id="pickAva"></span><span class="pick-txt"><small>Quem vai pregar</small><strong id="pickName">Pr. Joaquim</strong></span><span class="pick-arrow">Trocar ▾</span></button>
+        <div class="pop" id="pop" role="listbox"></div>
+      </div>
+      <div class="field outro hidden" id="outroBox">
+        <input type="text" id="outroNome" placeholder="Nome (ex.: Pr. Marcos)" maxlength="40">
+        <label class="check"><input type="checkbox" id="outroF"> Preletora</label>
+      </div>
+      <div class="car-wrap">
+        <div class="car" id="car"></div>
+        <button class="car-nav prev" id="carPrev" aria-label="Foto anterior">‹</button>
+        <button class="car-nav next" id="carNext" aria-label="Próxima foto">›</button>
+        <div class="dots" id="dots"></div>
+      </div>
+      <div class="btns hidden" id="addRow"><label class="btn sec full" for="file">+ Enviar nova foto</label></div>
+      <input type="file" id="file" accept="image/*" class="hidden">
+      <div class="proc" id="proc">
+        <div class="row">
+          <div class="pv" id="procPv"></div>
+          <div style="flex:1;min-width:0">
+            <strong id="procTitle">Removendo o fundo…</strong>
+            <div class="hint" id="procMsg">Isso roda no seu aparelho; a foto não é enviada para nenhum serviço externo.</div>
+            <div class="bar"><i id="procBar"></i></div>
+          </div>
+        </div>
+        <div class="btns hidden" id="procBtns">
+          <button class="btn" id="procSave">Usar e salvar na biblioteca</button>
+          <button class="btn sec" id="procOrig">Usar foto original</button>
+          <button class="btn sec" id="procCancel">Cancelar</button>
+        </div>
+      </div>
+      <div class="sliders" id="adjust">
+        <div class="sl"><span>Tamanho</span><input type="range" id="zoom" min="60" max="170" value="100"><output id="zoomO">100%</output></div>
+        <div class="sl"><span>Horizontal</span><input type="range" id="offX" min="-400" max="400" value="0"><output id="offXO">0</output></div>
+        <div class="sl"><span>Vertical</span><input type="range" id="offY" min="-400" max="400" value="0"><output id="offYO">0</output></div>
+      </div>
+      <p class="hint" id="libHint"></p>
+    </div>
+
+    <div class="step" data-step="6">
+      <h3><span>6</span>Exportar</h3>
+      <dl class="summary" id="summary"></dl>
+      <div class="btns">
+        <button class="btn full" id="pngBtn">↓ Baixar imagem (PNG)</button>
+        <button class="btn sec full" id="mp4Btn">🎬 Gerar vídeo animado (MP4)</button>
+      </div>
+      <p class="hint">O vídeo sai sempre em 1080 × 1920 (vertical), qualquer que seja o formato escolhido.</p>
+      <div class="bar hidden" id="vidBarWrap"><i id="vidBar"></i></div>
+      <div class="export-out" id="exportOut"></div>
+    </div>
+  </section>
+</div>
+
+<nav class="wnav" id="wnav">
+  <button class="btn sec" id="prevBtn">Voltar</button>
+  <button class="btn" id="nextBtn">Avançar</button>
+</nav>
+<div id="toast"></div>
+<div class="modal" id="modal"><div class="box"><p id="modalMsg"></p><div class="btns"><button class="btn" id="modalOk">Confirmar</button><button class="btn sec" id="modalNo">Cancelar</button></div></div></div>
+
+<script src="js/config.js"></script>
+<script src="js/logos.js"></script>
+<script src="js/motor-recorte/modelo-u2netp.js"></script>
+<script src="js/motor-recorte/u2net-cpu.js"></script>
+<script src="js/motor-recorte/u2net-gl.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
