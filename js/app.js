@@ -561,11 +561,11 @@ async function initCloud() {
     const [db, assets] = await Promise.all([claude.use('db').catch(() => null), claude.use('assets').catch(() => null)]);
     Lib.db = db; Lib.assets = assets;
     if (!db) return;
-    const timer = setTimeout(() => { $('cloud').querySelector('span').textContent = 'Biblioteca: conectando…'; }, 10000);
+    const timer = setTimeout(() => { }, 10000);
     db.collection('fotos').onSnapshot(snap => {
       clearTimeout(timer);
       Lib.cloud = snap.docs.map(d => { const v = d.data() || {}; return { id: 'c:' + d.id, rid: d.id, pregador: v.pregador, assetId: v.assetId, url: '/_blob/' + v.assetId, criadoEm: v.criadoEm || 0, src: 'cloud' }; }).filter(i => i.assetId);
-      $('cloud').classList.add('on'); $('cloud').querySelector('span').textContent = assets ? 'Biblioteca compartilhada' : 'Biblioteca (só leitura)';
+      $('cloud').classList.add('on');
       renderLib(); autoPickPhoto();
     }, err => { clearTimeout(timer); console.warn('db', err); });
   } catch (e) { console.warn(e); }
