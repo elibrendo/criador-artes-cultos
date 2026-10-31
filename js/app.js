@@ -59,7 +59,7 @@ const REC = achar(() => true) || dataDoCulto('familia');
 const S = {
   culto: REC.key, modelo: Object.keys(CULTOS[REC.key].modelos)[0], formato: 'story', data: REC.data, hora: REC.hora,
   pregador: 'pr-joaquim', outroNome: '', outroF: false,
-  fotoKey: null, foto: null, zoom: 1, offX: 0, offY: 0,
+  fotoKey: null, foto: null, zoom: 1, offX: 0, offY: 0, rot: 0,
 };
 try { const saved = JSON.parse(localStorage.getItem('artes-culto-v1') || 'null'); if (saved) for (const k of ['formato', 'outroNome', 'outroF']) if (k in saved) S[k] = saved[k]; } catch (e) {}
 if (!FORMATOS[S.formato]) S.formato = 'story';
@@ -208,7 +208,8 @@ function render(ctx, t, opt = {}) {
       const dw = img.width * sc, dh = img.height * sc;
       const dx = ph.x + (ph.w - dw) / 2 + S.offX, dy = ph.y + ph.h - dh + S.offY + (1 - a) * 140;
       lx.save(); lx.beginPath(); lx.rect(0, L.photoClip, W, ph.y + ph.h - L.photoClip); lx.clip();
-      lx.drawImage(img, dx, dy, dw, dh); lx.restore();
+      if (S.rot) { lx.translate(dx + dw / 2, dy + dh / 2); lx.rotate(S.rot * Math.PI / 180); lx.drawImage(img, -dw / 2, -dh / 2, dw, dh); } else lx.drawImage(img, dx, dy, dw, dh);
+      lx.restore();
       const fy = ph.y + ph.h - L.fadeH; const gr = lx.createLinearGradient(0, fy, 0, ph.y + ph.h);
       gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
       lx.globalCompositeOperation = 'destination-out'; lx.fillStyle = gr; lx.fillRect(0, fy, W, L.fadeH + 2);
@@ -473,10 +474,10 @@ $('time').oninput = e => { S.hora = e.target.value; redraw(); };
 let outroT;
 $('outroNome').oninput = e => { S.outroNome = e.target.value; $('pickName').textContent = S.outroNome || 'Digite o nome…'; redraw(); clearTimeout(outroT); outroT = setTimeout(() => { persist(); renderLib(); buildPreachers(); }, 500); };
 $('outroF').onchange = e => { S.outroF = e.target.checked; persist(); redraw(); };
-for (const [id, k, fmt] of [['zoom', 'zoom', v => v + '%'], ['offX', 'offX', v => v], ['offY', 'offY', v => v]]) {
+for (const [id, k, fmt] of [['zoom', 'zoom', v => v + '%'], ['offX', 'offX', v => v], ['offY', 'offY', v => v], ['rot', 'rot', v => v + '°']]) {
   $(id).oninput = e => { const v = +e.target.value; S[k] = k === 'zoom' ? v / 100 : v; $(id + 'O').textContent = fmt(v); redraw(); };
 }
-function resetAdjust() { S.zoom = 1; S.offX = 0; S.offY = 0; $('zoom').value = 100; $('offX').value = 0; $('offY').value = 0; $('zoomO').textContent = '100%'; $('offXO').textContent = '0'; $('offYO').textContent = '0'; }
+function resetAdjust() { S.zoom = 1; S.offX = 0; S.offY = 0; S.rot = 0; $('rot').value = 0; $('rotO').textContent = '0°'; $('zoom').value = 100; $('offX').value = 0; $('offY').value = 0; $('zoomO').textContent = '100%'; $('offXO').textContent = '0'; $('offYO').textContent = '0'; }
 
 /* ------------------------- biblioteca de fotos ------------------------- */
 // Nuvem (db + assets do artefato) quando disponível; senão IndexedDB neste navegador.
@@ -858,3 +859,13 @@ const fontsReady = (async () => {
   setTimeout(() => bgLoad().catch(() => {}), 1500); // pré-carrega o modelo de recorte
 })();
 matchMedia('(max-width:820px)').addEventListener('change', () => showStep(step));
+
+/* ------------------------- arte ampliada ------------------------- */
+// Toque na prévia: abre a arte grande com fundo desfocado; toque fora da arte (ou em Voltar) fecha.
+function closeLightbox() { $('lightbox').classList.remove('show'); }
+poster.addEventListener('click', () => {
+  try { $('lbImg').src = poster.toDataURL('image/png'); } catch (e) { return; }
+  $('lightbox').classList.add('show');
+});
+$('lightbox').onclick = e => { if (e.target !== $('lbImg')) closeLightbox(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
