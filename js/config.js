@@ -93,6 +93,8 @@ const PREGADORES = [
 const FORMATOS = {
   story: { nome: 'Status e Stories', w: 1080, h: 1920, desc: '1080 × 1920', onde: 'Status do WhatsApp, Instagram e Facebook' },
   feed: { nome: 'Feed', w: 1080, h: 1350, desc: '1080 × 1350', onde: 'Post no feed do Instagram e Facebook' },
+  thumbnail: { nome: 'Thumbnail (YouTube)', w: 1920, h: 1080, desc: '1920 × 1080', onde: 'Vídeo do YouTube' },
+  projecao: { nome: 'Projeção', w: 1920, h: 1080, desc: '1920 × 1080', onde: 'Telão da igreja' },
 };
 const PREGADOR_PADRAO = 'pr-joaquim';
 

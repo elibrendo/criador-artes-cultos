@@ -2,6 +2,10 @@
 
 Gera artes de divulgação dos cultos (PNG e vídeo MP4 animado), com remoção de fundo da foto do pregador feita no próprio navegador.
 
+O fluxo tem seis etapas: culto, data e horário, modelo, formato, pregador e exportação. A recomendação de divulgação da primeira etapa confirma o culto sugerido e avança direto ao modelo.
+
+Os formatos incluem Status/Stories (1080 × 1920), Feed (1080 × 1350), Thumbnail do YouTube (1920 × 1080, foto do pregador e título) e Projeção (1920 × 1080, título sobre fundo preto).
+
 ## Como abrir
 
 - **Mais simples:** dê dois cliques em `index.html` (abre no navegador).
@@ -12,7 +16,7 @@ Use Chrome ou Edge atualizados (MP4 e recorte funcionam melhor neles).
 ## Estrutura
 
 ```
-index.html                    página (estrutura dos 7 passos)
+index.html                    página (estrutura dos 6 passos)
 css/style.css                 visual da interface
 js/config.js                  ⭐ cultos, modelos, horários, pregadores, endereço
 js/app.js                     desenho da arte, animação, passos, fotos, exportação

@@ -107,6 +107,7 @@ function layer(name, W, H) { let c = layerCache[name]; if (!c) c = layerCache[na
 
 /* ------------------------------ layouts ------------------------------ */
 function layoutFor(fmt) {
+  if (fmt === 'thumbnail' || fmt === 'projecao') return { W: 1920, H: 1080 };
   if (fmt === 'feed') return {
     W: 1080, H: 1350, logoY: 78, logoW: 170, dateY: 168, dateW: 600, dateH: 54, dateFont: 25,
     giantTop: 210, giantH: 520, giantW: 1250,
@@ -158,8 +159,55 @@ function bigWordGeom(ctx, word, boxW, capH, maxStretch, spacingEm, fitAscent) {
   return { size, stretch, ch, ws: ws2, sp: sp2, total: total2, capPx: cap * size / 100 * stretch, ascPx: asc * stretch };
 }
 
+function renderThumbnail(ctx, t, opt, M, th, W, H) {
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(noiseLayer(W, H, th.dark), 0, 0, W, H);
+
+  const glow = ctx.createRadialGradient(1370, 540, 20, 1370, 540, 650);
+  glow.addColorStop(0, th.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(760, 0, 1160, H);
+
+  const photoBox = { x: 880, y: 20, w: 1020, h: 1060 };
+  if (S.foto) {
+    const a = E(t, 1, 1), img = S.foto;
+    const scale = Math.min(photoBox.w / img.width, photoBox.h / img.height) * S.zoom * (1 + .025 * clamp(t / VIDEO_SEG));
+    const dw = img.width * scale, dh = img.height * scale;
+    const dx = photoBox.x + (photoBox.w - dw) / 2 + S.offX, dy = photoBox.y + photoBox.h - dh + S.offY;
+    ctx.save(); ctx.globalAlpha = a;
+    if (S.rot) { ctx.translate(dx + dw / 2, dy + dh / 2); ctx.rotate(S.rot * Math.PI / 180); ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh); }
+    else ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.restore();
+  } else if (opt.preview) {
+    ctx.save(); ctx.strokeStyle = th.ink; ctx.globalAlpha = .45; ctx.setLineDash([14, 12]); ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(1390, 340, 125, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(1390, 1080, 315, 390, 0, Math.PI, 0); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle = th.ink; ctx.font = '600 28px Montserrat'; ctx.textAlign = 'center';
+    ctx.fillText('FOTO DO PREGADOR', 1390, 520); ctx.restore();
+  }
+
+  const titleX = 120, titleW = 720;
+  const kickerSize = fitFont(ctx, M.kicker, titleW, 52, 800, 'Montserrat', 14);
+  ctx.font = `800 ${kickerSize}px Montserrat`; ctx.fillStyle = th.ink;
+  tracked(ctx, M.kicker, titleX, 435, kickerSize * .14, 'left');
+  const titleSize = fitFont(ctx, M.big, titleW, 310, 400, 'Anton');
+  ctx.font = `400 ${titleSize}px Anton`; ctx.fillStyle = th.ink;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(M.big, titleX, 575);
+  ctx.restore();
+}
+
 function render(ctx, t, opt = {}) {
-  const M = curModel(), th = M.th, L = layoutFor(opt.fmt || S.formato), W = L.W, H = L.H;
+  const fmt = opt.fmt || S.formato, M = curModel(), th = M.th, L = layoutFor(fmt), W = L.W, H = L.H;
+  if (fmt === 'projecao') {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    const kickerSize = fitFont(ctx, M.kicker, W * .85, 100, 800, 'Montserrat');
+    ctx.font = `800 ${kickerSize}px Montserrat`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(M.kicker, W / 2, H * .28);
+    const size = fitFont(ctx, M.big, W * .9, H * .42, 400, 'Anton');
+    ctx.font = `400 ${size}px Anton`; ctx.fillText(M.big, W / 2, H * .64); ctx.restore(); return;
+  }
+  if (fmt === 'thumbnail') return renderThumbnail(ctx, t, opt, M, th, W, H);
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.textBaseline = 'alphabetic';
 
@@ -359,7 +407,7 @@ function buildSuggest() {
   const c = CULTOS[REC.key], d = new Date(REC.data + 'T12:00:00');
   const quando = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   $('suggest').innerHTML = `<p>Pelo calendário, ${REC.data === ymd(new Date()) ? 'hoje' : 'o próximo'} é o <strong>${c.nome}</strong> — ${quando}, às ${fmtHora(REC.hora)}. É esse que você vai divulgar?</p><button class="btn full" id="sugOk">Sim, é esse →</button>`;
-  $('sugOk').onclick = () => { escolherCulto(REC.key, REC); showStep(2); };
+  $('sugOk').onclick = () => { escolherCulto(REC.key, REC); showStep(3); };
 }
 // Passo 1: lista suspensa + carrossel de cartões (mesmo padrão do passo do pregador)
 const CULTO_KEYS = Object.keys(CULTOS);
@@ -414,7 +462,7 @@ function buildFormats() {
   $('formats').innerHTML = '';
   for (const [k, f] of Object.entries(FORMATOS)) {
     const b = document.createElement('button'); b.className = 'opt' + (S.formato === k ? ' sel' : '');
-    b.innerHTML = `<span class="fmt" style="height:${22 * f.h / f.w}px"></span><span><strong>${f.nome}</strong><small>${f.onde}</small></span>`;
+    b.innerHTML = `<span class="fmt" style="width:${22 * f.w / f.h}px;height:22px"></span><span><strong>${f.nome}</strong><small>${f.onde}</small></span>`;
     b.onclick = () => { S.formato = k; buildFormats(); refreshModelThumbs(); persist(); redraw(); };
     $('formats').appendChild(b);
   }
