@@ -292,3 +292,78 @@ button{cursor:pointer}
 .seg button:disabled{opacity:.35}
 .ed-tools .hint{text-align:center}
 @media (min-width:821px){ .editor{left:50%;width:min(720px,100vw);transform:translateX(-50%);border-left:1px solid var(--line);border-right:1px solid var(--line);box-shadow:0 0 0 100vw #000b} }
+
+/* ---------- etapas principais e gerenciador do cronograma ---------- */
+.top{min-height:62px}
+.workspace-nav{display:flex;align-items:center;gap:6px;margin-left:auto;margin-right:auto}
+.workspace-tab{border:1px solid transparent;border-radius:9px;padding:9px 16px;background:transparent;color:var(--muted);font-weight:700;font-size:12px}
+.workspace-tab:hover{color:var(--text);background:var(--card)}
+.workspace-tab.active{color:var(--text);border-color:#6e5338;background:#2a2018}
+.schedule-screen{height:calc(100vh - 62px);min-height:0;overflow:hidden;padding:28px clamp(18px,4vw,64px) 24px;background:var(--bg);display:flex;flex-direction:column}
+.schedule-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;max-width:1500px;margin:0 auto 22px}
+.schedule-heading h1{margin:0;font-size:clamp(24px,3vw,36px)}
+.schedule-heading p{margin:5px 0 0;color:var(--muted)}
+.schedule-heading .eyebrow{margin:0 0 5px;color:var(--accent2);font-size:10px;font-weight:800;letter-spacing:.15em}
+.month-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.month-controls strong{min-width:155px;text-align:center;text-transform:capitalize}
+.month-controls .btn{white-space:nowrap}
+.schedule-layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(280px,.8fr);gap:18px;width:100%;max-width:1500px;min-height:0;flex:1;margin:0 auto}
+.schedule-calendar,.schedule-form{min-width:0;min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.schedule-calendar{display:flex;flex-direction:column;overflow:hidden}
+#scheduleCalendar{display:flex;flex:1;min-height:0}
+.schedule-section-title{font-size:14px;margin:0 0 10px}
+.schedule-rules-section{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.sched-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;flex:1;min-height:0;grid-template-rows:28px repeat(var(--schedule-weeks,6),minmax(0,1fr))}
+.sched-weekday{text-align:center;color:var(--muted);font-size:11px;font-weight:700;padding:5px}
+.sched-day{min-height:0;padding:7px;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.sched-day.empty{background:transparent;border-color:transparent}
+.sched-day.today{border-color:var(--accent2)}
+.sched-date{font-size:12px;font-weight:800}
+.sched-event{margin-top:5px;padding:3px 5px;border-radius:4px;background:#523b27;color:#fff;font-size:10px;line-height:1.3;overflow-wrap:anywhere}
+.schedule-form{display:flex;flex-direction:column;gap:8px;overflow-y:auto;overscroll-behavior:contain}
+.schedule-form h2{font-size:16px;margin:0 0 5px}
+.schedule-form label{font-size:11px;color:#cfd7e2;font-weight:700}
+.schedule-form select,.schedule-form input{width:100%;padding:10px;background:#0d141e;border:1px solid #344156;border-radius:8px;outline:none;color:var(--text)}
+.schedule-rule-fields{display:flex;gap:8px}
+.schedule-rule-fields select{flex:1;min-width:0}
+.schedule-rules{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.schedule-rule{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:8px;font-size:11px}
+.schedule-rule button{flex:none;border:0;border-radius:6px;padding:5px 8px;background:#392522;color:#ffb5a8;font-size:11px}
+body.workspace-creation .schedule-screen{display:none}
+body.workspace-schedule .app{display:none}
+body.workspace-schedule .wnav{display:none}
+body.workspace-schedule{display:flex;height:100vh;height:100dvh;min-height:0;overflow:hidden;flex-direction:column}
+body.workspace-schedule .top{flex:none}
+body.workspace-schedule .schedule-screen{height:auto;flex:1}
+
+@media(max-width:820px){
+  .schedule-heading{align-items:flex-start;flex-direction:column}
+}
+@media(max-width:820px){
+  .top{flex-wrap:wrap;padding-left:14px;padding-right:14px}
+  .brand{margin-right:auto}
+  .workspace-nav{order:3;flex:0 0 100%;justify-content:center;margin:2px 0 0}
+  .workspace-tab{flex:1}
+  .schedule-screen{height:auto;min-height:0;padding:8px 12px 12px}
+  .schedule-heading{gap:6px;margin-bottom:8px}
+  .schedule-heading .eyebrow,.schedule-heading p:not(.eyebrow){display:none}
+  .schedule-heading h1{font-size:21px}
+  .month-controls{display:grid;grid-template-columns:38px minmax(0,1fr) 38px auto;gap:6px}
+  .month-controls .btn{padding:8px}
+  .month-controls .btn:last-child{grid-column:1/-1}
+  .schedule-calendar,.schedule-form{padding:10px}
+  .schedule-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
+  .schedule-form{display:grid;grid-template-columns:auto minmax(0,1fr);align-content:start;align-items:center;gap:4px 8px;overflow-y:auto}
+  .schedule-form h2,.schedule-rule-fields,.schedule-form button{grid-column:1/-1}
+  .schedule-form h2{margin-bottom:2px}
+  .schedule-form label{white-space:nowrap}
+  .schedule-form select,.schedule-form input{padding:7px}
+  .schedule-form select,.schedule-form input{padding:7px}
+  .schedule-form .btn{padding:9px}
+  .schedule-rules-section{margin-top:16px;padding-top:12px}
+  .sched-grid{gap:3px}
+  .sched-day{min-height:0;padding:4px}
+  .sched-event{font-size:9px;margin-top:3px;padding:2px}
+  .month-controls{width:100%}
+  .month-controls strong{flex:1}
+}

@@ -3,7 +3,7 @@
    CONFIGURAÇÃO — edite aqui cultos, modelos, pregadores e endereço.
    Para adicionar um modelo a um culto, copie um bloco dentro de "modelos"
    e troque a chave (ex.: "festivo"), o nome e as cores.
-   O cronograma (qual culto cai em qual dia) fica em cultoDoDia(), no app.js.
+   O cronograma recorrente é configurado na etapa Cronograma e salvo no navegador.
    ===================================================================== */
 const ENDERECO = ['RUA CEARÁ, 219 - SÃO BENEDITO,', 'ALPINÓPOLIS'];
 

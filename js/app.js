@@ -23,28 +23,61 @@ const ERASER_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" 
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 /* ---------------------------- cronograma ---------------------------- */
-// Qual culto cai em cada dia: 1º dom = Família, 2º = Santa Ceia, 3º = Missões, 4º (e 5º) = Adoração;
-// toda quarta = Ensino; 1ª sexta = Jovens; última sexta = Irmãs.
-function cultoDoDia(d) {
-  const dow = d.getDay(), n = d.getDate();
-  if (dow === 0) return { key: ['familia', 'santaceia', 'missoes', 'adoracao', 'adoracao'][Math.ceil(n / 7) - 1], hora: '19:00' };
-  if (dow === 3) return { key: 'ensino', hora: '19:30' };
-  if (dow === 5) {
-    const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    if (n <= 7) return { key: 'jovens', hora: '19:00' };
-    if (n + 7 > dim) return { key: 'irmas', hora: '19:00' };
-  }
-  return null;
+const SCHEDULE_STORAGE_KEY = 'artes-culto-cronograma-v1';
+const WEEKDAY_NAMES = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+function defaultScheduleRules() {
+  return [
+    { id: 'default-familia', culto: 'familia', type: 'ordinal-weekday', ordinal: 1, weekday: 0, hora: '19:00' },
+    { id: 'default-santaceia', culto: 'santaceia', type: 'ordinal-weekday', ordinal: 2, weekday: 0, hora: '19:00' },
+    { id: 'default-missoes', culto: 'missoes', type: 'ordinal-weekday', ordinal: 3, weekday: 0, hora: '19:00' },
+    { id: 'default-adoracao-4', culto: 'adoracao', type: 'ordinal-weekday', ordinal: 4, weekday: 0, hora: '19:00' },
+    { id: 'default-adoracao-5', culto: 'adoracao', type: 'ordinal-weekday', ordinal: 5, weekday: 0, hora: '19:00' },
+    { id: 'default-ensino', culto: 'ensino', type: 'weekly', weekday: 3, hora: '19:30' },
+    { id: 'default-jovens', culto: 'jovens', type: 'ordinal-weekday', ordinal: 1, weekday: 5, hora: '19:00' },
+    { id: 'default-irmas', culto: 'irmas', type: 'last-weekday', weekday: 5, hora: '19:00' },
+  ];
 }
+function validScheduleRule(r) {
+  return r && typeof r.id === 'string' && Object.prototype.hasOwnProperty.call(CULTOS, r.culto) &&
+    ['ordinal-weekday', 'weekly', 'day-of-month', 'last-day', 'last-weekday'].includes(r.type) &&
+    /^([01]\d|2[0-3]):[0-5]\d$/.test(r.hora) &&
+    (r.weekday == null || Number.isInteger(r.weekday) && r.weekday >= 0 && r.weekday <= 6) &&
+    (r.ordinal == null || Number.isInteger(r.ordinal) && r.ordinal >= 1 && r.ordinal <= 5) &&
+    (r.day == null || Number.isInteger(r.day) && r.day >= 1 && r.day <= 31);
+}
+function loadScheduleRules() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SCHEDULE_STORAGE_KEY) || 'null');
+    if (saved == null) return defaultScheduleRules();
+    if (Array.isArray(saved) && saved.every(validScheduleRule)) return saved;
+    console.warn('Cronograma salvo inválido; usando a programação padrão.');
+  } catch (e) { console.warn('Não foi possível carregar o cronograma salvo.', e); }
+  return defaultScheduleRules();
+}
+let SCHEDULE_RULES = loadScheduleRules();
+function ruleMatchesDate(rule, d) {
+  const weekday = d.getDay(), day = d.getDate(), daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  if (rule.type === 'weekly') return weekday === rule.weekday;
+  if (rule.type === 'ordinal-weekday') return weekday === rule.weekday && Math.ceil(day / 7) === rule.ordinal;
+  if (rule.type === 'day-of-month') return day === Math.min(rule.day, daysInMonth);
+  if (rule.type === 'last-day') return day === daysInMonth;
+  return weekday === rule.weekday && day + 7 > daysInMonth;
+}
+function cultosNaData(d) {
+  return SCHEDULE_RULES.filter(r => ruleMatchesDate(r, d)).map(r => ({ key: r.culto, hora: r.hora, ruleId: r.id }));
+}
+function cultoDoDia(d) { return cultosNaData(d)[0] || null; }
 // Primeiro culto do cronograma, de hoje em diante, que atende ao filtro (hoje só conta se ainda não passou do horário)
 function achar(pred) {
   const now = new Date();
   for (let i = 0; i < 120; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 12), c = cultoDoDia(d);
-    if (!c || !pred(c)) continue;
-    const [h, m] = c.hora.split(':').map(Number);
-    if (i === 0 && now.getHours() * 60 + now.getMinutes() > h * 60 + m) continue;
-    return { key: c.key, hora: c.hora, data: ymd(d) };
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 12);
+    for (const c of cultosNaData(d)) {
+      if (!pred(c)) continue;
+      const [h, m] = c.hora.split(':').map(Number);
+      if (i === 0 && now.getHours() * 60 + now.getMinutes() > h * 60 + m) continue;
+      return { key: c.key, hora: c.hora, data: ymd(d) };
+    }
   }
   return null;
 }
@@ -55,6 +88,7 @@ function dataDoCulto(key) {
 }
 function fmtHora(h) { const [a, b] = h.split(':'); return +a + 'h' + (b === '00' ? '' : b); }
 const REC = achar(() => true) || dataDoCulto('familia');
+function recommendation() { return achar(() => true) || dataDoCulto('familia'); }
 
 /* ------------------------------ estado ------------------------------ */
 const S = {
@@ -404,10 +438,10 @@ function attachCarousel(car, prev, next, onIdx) {
 }
 function scrollCar(car, i) { const w = car.clientWidth; if (w && Math.abs(car.scrollLeft - i * w) > 2) car.scrollTo({ left: i * w, behavior: 'auto' }); }
 function buildSuggest() {
-  const c = CULTOS[REC.key], d = new Date(REC.data + 'T12:00:00');
+  const rec = recommendation(), c = CULTOS[rec.key], d = new Date(rec.data + 'T12:00:00');
   const quando = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  $('suggest').innerHTML = `<p>Pelo calendário, ${REC.data === ymd(new Date()) ? 'hoje' : 'o próximo'} é o <strong>${c.nome}</strong> — ${quando}, às ${fmtHora(REC.hora)}. É esse que você vai divulgar?</p><button class="btn full" id="sugOk">Sim, é esse →</button>`;
-  $('sugOk').onclick = () => { escolherCulto(REC.key, REC); showStep(3); };
+  $('suggest').innerHTML = `<p>Pelo calendário, ${rec.data === ymd(new Date()) ? 'hoje' : 'o próximo'} é o <strong>${c.nome}</strong> — ${quando}, às ${fmtHora(rec.hora)}. É esse que você vai divulgar?</p><button class="btn full" id="sugOk">Sim, é esse →</button>`;
+  $('sugOk').onclick = () => { escolherCulto(rec.key, rec); showStep(3); };
 }
 // Passo 1: lista suspensa + carrossel de cartões (mesmo padrão do passo do pregador)
 const CULTO_KEYS = Object.keys(CULTOS);
@@ -475,19 +509,179 @@ function buildCalendar() {
   h += ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(x => `<span class="cal-dow">${x}</span>`).join('');
   for (let i = 0; i < first.getDay(); i++) h += '<span></span>';
   for (let n = 1; n <= dim; n++) {
-    const dt = new Date(cal.y, cal.m, n, 12), k = ymd(dt), c = cultoDoDia(dt);
-    h += `<button type="button" class="day${k === S.data ? ' sel' : ''}${k === hoje ? ' today' : ''}${c && c.key === S.culto ? ' has' : ''}" data-k="${k}">${n}</button>`;
+    const dt = new Date(cal.y, cal.m, n, 12), k = ymd(dt), events = cultosNaData(dt);
+    h += `<button type="button" class="day${k === S.data ? ' sel' : ''}${k === hoje ? ' today' : ''}${events.some(c => c.key === S.culto) ? ' has' : ''}" data-k="${k}">${n}</button>`;
   }
   $('cal').innerHTML = h + '</div>';
-  const d = S.data ? new Date(S.data + 'T12:00:00') : null, c = d && cultoDoDia(d);
+  const d = S.data ? new Date(S.data + 'T12:00:00') : null, events = d ? cultosNaData(d) : [];
   $('dateHint').textContent = !d ? 'Toque num dia do calendário.' :
-    d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) + (c && c.key !== S.culto ? ` · o calendário prevê ${CULTOS[c.key].nome} nesse dia.` : '.');
+    d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) +
+    (events.length ? ` · ${events.map(c => CULTOS[c.key].nome).join(', ')}${events.some(c => c.key === S.culto) ? ' neste dia.' : '.'}` : '.');
 }
 $('cal').onclick = e => {
   const n = e.target.closest('[data-d]'), k = e.target.closest('[data-k]');
   if (n) { const d = new Date(cal.y, cal.m + +n.dataset.d, 1); cal.y = d.getFullYear(); cal.m = d.getMonth(); buildCalendar(); }
   else if (k) { S.data = k.dataset.k; buildCalendar(); redraw(); }
 };
+
+/* ---------------------- gerenciador do cronograma ---------------------- */
+const scheduleMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+function saveScheduleRules() {
+  try { localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(SCHEDULE_RULES)); }
+  catch (e) { console.error('Não foi possível salvar o cronograma.', e); toast('Não foi possível salvar. Verifique o espaço disponível no navegador.'); return false; }
+  buildScheduleCalendar(); buildScheduleRuleList(); buildCalendar(); buildSuggest();
+  return true;
+}
+function setWorkspaceView(view) {
+  const creation = view === 'creation';
+  document.body.classList.toggle('workspace-creation', creation);
+  document.body.classList.toggle('workspace-schedule', !creation);
+  document.querySelectorAll('.workspace-tab').forEach(b => {
+    const active = b.dataset.view === view;
+    b.classList.toggle('active', active);
+    if (active) b.setAttribute('aria-current', 'step');
+    else b.removeAttribute('aria-current');
+  });
+  if (creation) { draw(); buildModels(); }
+}
+document.querySelectorAll('.workspace-tab').forEach(b => b.addEventListener('click', () => setWorkspaceView(b.dataset.view)));
+function scheduleRuleDescription(rule) {
+  const cult = CULTOS[rule.culto].nome, time = fmtHora(rule.hora);
+  if (rule.type === 'ordinal-weekday') return `${rule.ordinal}º ${WEEKDAY_NAMES[rule.weekday]} · ${cult} · ${time}`;
+  if (rule.type === 'weekly') return `Toda ${WEEKDAY_NAMES[rule.weekday]} · ${cult} · ${time}`;
+  if (rule.type === 'day-of-month') return `Dia ${rule.day} (ajusta ao fim do mês) · ${cult} · ${time}`;
+  if (rule.type === 'last-day') return `Último dia do mês · ${cult} · ${time}`;
+  return `Última ${WEEKDAY_NAMES[rule.weekday]} do mês · ${cult} · ${time}`;
+}
+function buildScheduleRuleList() {
+  const box = $('scheduleRules'); box.innerHTML = '';
+  if (!SCHEDULE_RULES.length) { box.textContent = 'Nenhuma programação recorrente cadastrada.'; return; }
+  for (const rule of SCHEDULE_RULES) {
+    const row = document.createElement('div'); row.className = 'schedule-rule';
+    const text = document.createElement('span'); text.textContent = scheduleRuleDescription(rule);
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remover'; remove.dataset.removeRule = rule.id;
+    row.append(text, remove); box.appendChild(row);
+  }
+}
+function buildScheduleRuleFields() {
+  const box = $('scheduleRuleFields'), type = $('scheduleRule').value; box.innerHTML = '';
+  const select = (name, options, label) => {
+    const el = document.createElement('select'); el.name = name; el.setAttribute('aria-label', label);
+    for (const [value, text] of options) { const opt = document.createElement('option'); opt.value = value; opt.textContent = text; el.appendChild(opt); }
+    box.appendChild(el);
+  };
+  if (type === 'ordinal-weekday') select('ordinal', [[1, '1º'], [2, '2º'], [3, '3º'], [4, '4º'], [5, '5º']], 'Ordem no mês');
+  if (type === 'ordinal-weekday' || type === 'weekly' || type === 'last-weekday') {
+    select('weekday', WEEKDAY_NAMES.map((name, i) => [i, name[0].toUpperCase() + name.slice(1)]), 'Dia da semana');
+  }
+  if (type === 'day-of-month') {
+    const day = document.createElement('input'); day.type = 'number'; day.name = 'day'; day.min = 1; day.max = 31; day.value = 1; day.setAttribute('aria-label', 'Dia do mês'); box.appendChild(day);
+  }
+}
+function monthlyScheduleEvents(year, month) {
+  const days = new Date(year, month + 1, 0).getDate(), events = new Map();
+  for (let day = 1; day <= days; day++) {
+    const d = new Date(year, month, day, 12), matches = cultosNaData(d);
+    if (matches.length) events.set(day, matches);
+  }
+  return events;
+}
+function buildScheduleCalendar() {
+  const year = scheduleMonth.getFullYear(), month = scheduleMonth.getMonth();
+  $('scheduleMonthLabel').textContent = new Date(year, month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const events = monthlyScheduleEvents(year, month), firstDay = new Date(year, month, 1).getDay(), days = new Date(year, month + 1, 0).getDate();
+  const weeks = Math.ceil((firstDay + days) / 7);
+  const grid = document.createElement('div'); grid.className = 'sched-grid';
+  grid.style.setProperty('--schedule-weeks', weeks);
+  for (const name of ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']) {
+    const heading = document.createElement('div'); heading.className = 'sched-weekday'; heading.textContent = name; grid.appendChild(heading);
+  }
+  for (let i = 0; i < firstDay; i++) { const empty = document.createElement('div'); empty.className = 'sched-day empty'; grid.appendChild(empty); }
+  for (let day = 1; day <= days; day++) {
+    const cell = document.createElement('div'); cell.className = 'sched-day';
+    if (ymd(new Date(year, month, day)) === ymd(new Date())) cell.classList.add('today');
+    const number = document.createElement('div'); number.className = 'sched-date'; number.textContent = day; cell.appendChild(number);
+    for (const event of (events.get(day) || []).slice(0, 3)) {
+      const item = document.createElement('div'); item.className = 'sched-event'; item.textContent = `${CULTOS[event.key].nome} · ${fmtHora(event.hora)}`;
+      const theme = Object.values(CULTOS[event.key].modelos)[0].th; item.style.background = theme.bg; item.style.color = theme.ink; cell.appendChild(item);
+    }
+    const extra = (events.get(day) || []).length - 3;
+    if (extra > 0) { const item = document.createElement('div'); item.className = 'sched-event'; item.textContent = `+${extra} cultos`; cell.appendChild(item); }
+    grid.appendChild(cell);
+  }
+  for (let i = firstDay + days; i < weeks * 7; i++) {
+    const empty = document.createElement('div'); empty.className = 'sched-day empty'; grid.appendChild(empty);
+  }
+  $('scheduleCalendar').replaceChildren(grid);
+}
+async function exportScheduleArt() {
+  await fontsReady;
+  const year = scheduleMonth.getFullYear(), month = scheduleMonth.getMonth();
+  const canvas = document.createElement('canvas'); canvas.width = 1920; canvas.height = 1080;
+  const ctx = canvas.getContext('2d'), left = 64, top = 215, gridW = 1792, headH = 48;
+  const firstDay = new Date(year, month, 1).getDay(), days = new Date(year, month + 1, 0).getDate();
+  const rows = Math.ceil((firstDay + days) / 7), rowH = 760 / rows, colW = gridW / 7, events = monthlyScheduleEvents(year, month);
+  ctx.fillStyle = '#f4efe6'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#201810'; ctx.font = '800 24px Montserrat'; ctx.textAlign = 'left'; ctx.fillText('PROGRAMAÇÃO MENSAL · FILADÉLFIA', left, 65);
+  ctx.font = '800 68px Montserrat'; ctx.fillText(new Date(year, month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase(), left, 145);
+  ctx.fillStyle = '#8a3f22'; ctx.fillRect(left, 170, 190, 6);
+  const weekdays = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+  for (let col = 0; col < 7; col++) {
+    const x = left + col * colW;
+    ctx.fillStyle = '#201810'; ctx.fillRect(x, top, colW - 4, headH - 4);
+    ctx.fillStyle = '#fff'; ctx.font = '700 17px Montserrat'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(weekdays[col], x + (colW - 4) / 2, top + (headH - 4) / 2);
+  }
+  for (let day = 1; day <= days; day++) {
+    const index = firstDay + day - 1, row = Math.floor(index / 7), col = index % 7;
+    const x = left + col * colW, y = top + headH + row * rowH, cellW = colW - 4, cellH = rowH - 4;
+    ctx.fillStyle = '#fffdfa'; ctx.fillRect(x, y, cellW, cellH);
+    ctx.strokeStyle = '#d9d0c3'; ctx.lineWidth = 1; ctx.strokeRect(x, y, cellW, cellH);
+    ctx.fillStyle = '#201810'; ctx.font = '700 20px Montserrat'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(String(day), x + 12, y + 27);
+    const items = events.get(day) || [];
+    for (const [i, event] of items.slice(0, 3).entries()) {
+      const theme = Object.values(CULTOS[event.key].modelos)[0].th, itemY = y + 32 + i * 25;
+      ctx.fillStyle = theme.bg; ctx.fillRect(x + 8, itemY, cellW - 16, 23);
+      ctx.fillStyle = theme.ink;
+      const label = `${CULTOS[event.key].nome} · ${fmtHora(event.hora)}`;
+      const size = fitFont(ctx, label, cellW - 30, 11, 700, 'Montserrat');
+      ctx.font = `700 ${size}px Montserrat`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + 15, itemY + 11.5);
+    }
+    if (items.length > 3) { ctx.fillStyle = '#5c5145'; ctx.font = '600 12px Montserrat'; ctx.fillText(`+${items.length - 3} cultos`, x + 12, y + cellH - 10); }
+  }
+  ctx.fillStyle = '#766b5f'; ctx.font = '500 14px Montserrat'; ctx.textAlign = 'right'; ctx.fillText('Programação sujeita a alterações', canvas.width - left, 1035);
+  const blob = await new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('Não foi possível gerar a imagem.')), 'image/png'));
+  await saveFile(blob, `cronograma-${year}-${String(month + 1).padStart(2, '0')}.png`);
+}
+function setupScheduleManager() {
+  for (const [key, cult] of Object.entries(CULTOS)) {
+    const option = document.createElement('option'); option.value = key; option.textContent = cult.nome; $('scheduleCult').appendChild(option);
+  }
+  $('scheduleRule').addEventListener('change', buildScheduleRuleFields);
+  $('scheduleForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const type = $('scheduleRule').value, controls = Object.fromEntries(new FormData($('scheduleForm')).entries());
+    const rule = { id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, culto: $('scheduleCult').value, type, hora: $('scheduleTime').value };
+    if (type === 'ordinal-weekday') { rule.ordinal = +controls.ordinal; rule.weekday = +controls.weekday; }
+    if (type === 'weekly' || type === 'last-weekday') rule.weekday = +controls.weekday;
+    if (type === 'day-of-month') rule.day = +controls.day;
+    if (!validScheduleRule(rule)) { toast('Confira os dados da programação.'); return; }
+    SCHEDULE_RULES.push(rule);
+    if (saveScheduleRules()) { $('scheduleForm').reset(); $('scheduleTime').value = '19:00'; buildScheduleRuleFields(); toast('Culto adicionado ao cronograma.'); }
+    else SCHEDULE_RULES.pop();
+  });
+  $('scheduleRules').addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-rule]');
+    if (!button) return;
+    const previousRules = SCHEDULE_RULES;
+    SCHEDULE_RULES = previousRules.filter(rule => rule.id !== button.dataset.removeRule);
+    if (!saveScheduleRules()) { SCHEDULE_RULES = previousRules; buildScheduleRuleList(); }
+  });
+  $('schedulePrev').onclick = () => { scheduleMonth.setMonth(scheduleMonth.getMonth() - 1); buildScheduleCalendar(); };
+  $('scheduleNext').onclick = () => { scheduleMonth.setMonth(scheduleMonth.getMonth() + 1); buildScheduleCalendar(); };
+  $('scheduleExport').onclick = () => exportScheduleArt().catch(e => { console.error(e); toast(e.message || 'Não foi possível exportar o cronograma.'); });
+  buildScheduleRuleFields(); buildScheduleCalendar(); buildScheduleRuleList();
+}
 function initials(n) { return (n || '?').replace(/^(Pr|Dc|Pb|Ev|Mis)\.?\s+/i, '').split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase(); }
 function avaFor(key) { const it = [...Lib.cloud, ...Lib.local].filter(i => i.pregador === key).sort((a, b) => b.criadoEm - a.criadoEm)[0]; return it ? it.url : null; }
 function avaHTML(key, nome) { const u = avaFor(key); return `<span class="pick-ava">${u ? `<img alt="" src="${u}">` : initials(nome)}</span>`; }
@@ -916,7 +1110,7 @@ const fontsReady = (async () => {
   try { await Promise.race([Promise.all(['100px Anton', '100px "Mrs Saint Delafield"', '800 40px Montserrat', '600 30px Montserrat'].map(f => document.fonts.load(f))), new Promise(r => setTimeout(r, 4000))]); } catch (e) {}
 })();
 (async () => {
-  buildSuggest(); buildCultos(); buildFormats(); buildPreachers(); syncForm(); resetAdjust(); showStep(1); buildSummary();
+  setupScheduleManager(); buildSuggest(); buildCultos(); buildFormats(); buildPreachers(); syncForm(); resetAdjust(); showStep(1); buildSummary();
   try { [R.logoA, R.logoF] = await Promise.all([loadImg(LOGO_ADMMP), loadImg(LOGO_FILA)]); } catch (e) {}
   draw(); await fontsReady; draw(); buildModels();
   await loadLocal(); autoPickPhoto(); initCloud();

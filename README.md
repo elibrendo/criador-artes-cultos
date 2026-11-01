@@ -2,7 +2,7 @@
 
 Gera artes de divulgação dos cultos (PNG e vídeo MP4 animado), com remoção de fundo da foto do pregador feita no próprio navegador.
 
-O fluxo tem seis etapas: culto, data e horário, modelo, formato, pregador e exportação. A recomendação de divulgação da primeira etapa confirma o culto sugerido e avança direto ao modelo.
+O app começa no gerenciador mensal do cronograma, com regras recorrentes editáveis e exportação da programação como PNG 1920 × 1080. As regras ficam salvas localmente neste navegador. A etapa superior **Criar arte** abre o fluxo de seis passos: culto, data e horário, modelo, formato, pregador e exportação. A recomendação de divulgação da primeira etapa confirma o culto sugerido e avança direto ao modelo.
 
 Os formatos incluem Status/Stories (1080 × 1920), Feed (1080 × 1350), Thumbnail do YouTube (1920 × 1080, foto do pregador e título) e Projeção (1920 × 1080, título sobre fundo preto).
 
@@ -39,7 +39,7 @@ festivo: { nome: 'Festivo', kicker: 'CULTO DA', big: 'FAMÍLIA', script: 'famíl
 - `kicker` texto pequeno acima do título · `big` palavra grande com textura · `script` palavra cursiva · `giant` palavra gigante no fundo
 - `th.bg` fundo · `th.ink` cor principal (textos, etiqueta, logos) · `th.big`/`th.giant` cores das palavras grandes · `dark: true` para fundos escuros
 
-**Mudar dia/horário padrão** — `slots` do culto (`dow`: 0 = domingo … 6 = sábado; `null` = não muda a data).
+**Editar a programação recorrente** — use a etapa **Cronograma** no app. As regras ficam salvas localmente no navegador e são usadas tanto na sugestão de culto quanto na arte mensal.
 
 **Adicionar pregador** — inclua em `PREGADORES` (`f: true` faz a etiqueta sair "PRELETORA").
 

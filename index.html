@@ -6,13 +6,60 @@
 <title>Criador de Artes — Cultos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700;800&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v23h28_301026">
+<link rel="stylesheet" href="css/style.css?v11h23_011126">
 </head>
-<body>
+<body class="workspace-schedule">
 <header class="top">
   <div class="brand"><b>✦</b><div>CRIADOR DE ARTES<small>Cultos · Filadélfia</small></div></div>
-  <div class="cloud" id="cloud"><i></i><span>v10h45_011126</span></div>
+  <nav class="workspace-nav" aria-label="Etapas principais">
+    <button class="workspace-tab active" data-view="schedule" aria-current="step" type="button">1 · Cronograma</button>
+    <button class="workspace-tab" data-view="creation" type="button">2 · Criar arte</button>
+  </nav>
+  <div class="cloud" id="cloud"><i></i><span>v11h23_011126</span></div>
 </header>
+
+<main class="schedule-screen" id="scheduleScreen">
+  <section class="schedule-heading">
+    <div>
+      <p class="eyebrow">GERENCIADOR DA IGREJA</p>
+      <h1>Cronograma mensal</h1>
+      <p>Organize os cultos recorrentes e exporte a programação do mês como imagem.</p>
+    </div>
+    <div class="month-controls">
+      <button class="btn sec" id="schedulePrev" type="button" aria-label="Mês anterior">‹</button>
+      <strong id="scheduleMonthLabel"></strong>
+      <button class="btn sec" id="scheduleNext" type="button" aria-label="Próximo mês">›</button>
+      <button class="btn" id="scheduleExport" type="button">↓ Exportar cronograma PNG</button>
+    </div>
+  </section>
+  <section class="schedule-layout">
+    <div class="schedule-calendar">
+      <h2 class="schedule-section-title">Cultos do mês</h2>
+      <div id="scheduleCalendar"></div>
+    </div>
+    <form class="schedule-form" id="scheduleForm">
+      <h2>Adicionar programação</h2>
+      <label for="scheduleCult">Culto</label>
+      <select id="scheduleCult" required></select>
+      <label for="scheduleRule">Repetição</label>
+      <select id="scheduleRule">
+        <option value="ordinal-weekday">1º, 2º, 3º, 4º ou 5º dia da semana</option>
+        <option value="weekly">Toda semana</option>
+        <option value="day-of-month">Dia do mês</option>
+        <option value="last-day">Último dia do mês</option>
+        <option value="last-weekday">Último dia da semana no mês</option>
+      </select>
+      <div class="schedule-rule-fields" id="scheduleRuleFields"></div>
+      <label for="scheduleTime">Horário</label>
+      <input id="scheduleTime" type="time" value="19:00" required>
+      <button class="btn full" type="submit">Adicionar ao cronograma</button>
+      <section class="schedule-rules-section">
+        <h2 class="schedule-section-title">Regras recorrentes</h2>
+        <div class="schedule-rules" id="scheduleRules"></div>
+      </section>
+    </form>
+  </section>
+</main>
 
 <div class="app">
   <section class="stage">
@@ -142,12 +189,12 @@
 <div id="toast"></div>
 <div class="modal" id="modal"><div class="box"><p id="modalMsg"></p><div class="btns"><button class="btn" id="modalOk">Confirmar</button><button class="btn sec" id="modalNo">Cancelar</button></div></div></div>
 
-<script src="js/config.js?v10h45_011126"></script>
+<script src="js/config.js?v11h05_011126"></script>
 <script src="js/logos.js?v23h28_301026"></script>
 <script src="js/motor-recorte/modelo-u2netp.js?v23h28_301026"></script>
 <script src="js/motor-recorte/u2net-cpu.js?v23h28_301026"></script>
 <script src="js/motor-recorte/u2net-gl.js?v23h28_301026"></script>
-<script src="js/app.js?v10h45_011126"></script>
+<script src="js/app.js?v11h05_011126"></script>
 <script src="js/editor.js?v23h28_301026"></script>
 </body>
 </html>
